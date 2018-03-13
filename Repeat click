@@ -1,0 +1,376 @@
+低配重复点选：
+
+INSERT INTO  `member_fav_dish`
+		            ( 
+		             `member_id`,
+		             `dish_id`,
+		             `dish_name`,
+		             `dish_raw`,
+		             `percent`,
+		             `flag`,
+		             dish_type
+		             )
+
+
+
+SELECT * FROM (
+
+							SELECT a.member_Id,
+							CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN z
+							ELSE
+								CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN c
+								ELSE
+									CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN v
+									ELSE b
+									END
+								END
+							END AS dish_id,
+							CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN dish_name1
+							ELSE
+								CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN dish_name2
+								ELSE
+									CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN dish_name3
+									ELSE dish_name4
+									END
+								END
+							END AS 'dish_name',
+							CASE WHEN a1>0 THEN a1
+								ELSE CASE WHEN a2>0 THEN a2
+									ELSE CASE WHEN a3>0 THEN a3 
+										ELSE a4 
+										END 
+								END 
+							END AS '点选次数',
+							CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN percent1
+							ELSE
+								CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN percent2
+								ELSE
+									CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN percent3
+									ELSE percent4
+									END
+								END
+							END AS 'percent',1 AS flag, '低配重复点选' AS dish_type
+									
+							 FROM 
+
+							(SELECT z.member_id,a.dish_id AS z,b.dish_id AS c,c.dish_id AS v,d.dish_id AS b,
+							a.dish_raw AS a1,b.dish_raw AS a2 ,c.dish_raw AS a3,d.dish_raw AS a4,
+							IFNULL(a.dish_name1,0) AS dish_name1,IFNULL(a.percent1,0)AS percent1,IFNULL(b.dish_name2,0)AS dish_name2,
+							IFNULL(b.percent2,0) AS percent2,IFNULL(c.dish_name3,0) AS dish_name3,
+							IFNULL(c.percent3,0) AS percent3,IFNULL(d.dish_name4,0) AS dish_name4,
+							IFNULL(d.percent4,0) AS percent4 FROM  `member_tag_summary`AS z LEFT JOIN
+							#top1	
+								(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name1,a.dish_raw,a.percent AS percent1,a.flag,a.dish_type FROM 
+									(
+									SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+									SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum ,1  AS `flag` ,  
+									'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+									INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+									INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+									INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+									INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top1 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+									#left join `member_dish_top`as top on tag.dish_id=dish.dish_id 
+									WHERE conn.people_num<=4
+									AND mm.sum_all>=2  AND top.top_flag=1 
+									AND dish.dish_num>0
+									#AND conn.member_id ='22995'
+									GROUP BY conn.member_id,dish.`dish_id`
+									#HAVING `percent`>50
+									ORDER BY percent DESC,con_sum DESC ,order1 DESC
+									) a
+									GROUP BY member_id) a  ON a.member_id=z.member_id
+							LEFT JOIN 
+							#top2
+									(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name2,a.dish_raw,a.percent AS percent2,a.flag,a.dish_type FROM 
+									(
+									SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+									SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum ,1  AS `flag` ,  
+									'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+									INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+									INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+									INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+									INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top2 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+									#left join `member_dish_top`as top on tag.dish_id=dish.dish_id 
+									WHERE conn.people_num<=4
+									AND mm.sum_all>=2  AND top.top_flag=1 
+									AND dish.dish_num>0
+									#AND conn.member_id ='22995'
+									GROUP BY conn.member_id,dish.`dish_id`
+									#HAVING `percent`>50
+									ORDER BY percent DESC,con_sum DESC ,order1 DESC
+									) a
+									GROUP BY member_id) b ON  b.member_id=z.member_id
+									
+							LEFT JOIN 		
+							#top3
+									(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name3,a.dish_raw,a.percent AS percent3,a.flag,a.dish_type FROM 
+									(
+									SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+									SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum ,1  AS `flag` ,  
+									'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+									INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+									INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+									INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+									INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top3 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+									#left join `member_dish_top`as top on tag.dish_id=dish.dish_id 
+									WHERE conn.people_num<=4
+									AND mm.sum_all>=2  AND top.top_flag=1 
+									AND dish.dish_num>0
+									#AND conn.member_id ='22995'
+									GROUP BY conn.member_id,dish.`dish_id`
+									#HAVING `percent`>50
+									ORDER BY percent DESC,con_sum DESC ,order1 DESC
+									) a
+									GROUP BY member_id) AS c ON c.member_id=z.member_id
+
+							#top4		
+							LEFT JOIN (		SELECT a.member_id,a.dish_id, a.dish_name AS dish_name4,a.dish_raw,a.percent AS percent4,a.flag,a.dish_type FROM 
+									(
+									SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+									SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum ,1  AS `flag` ,  
+									'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+									INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+									INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+									INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+									INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top4 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+									#left join `member_dish_top`as top on tag.dish_id=dish.dish_id 
+									WHERE conn.people_num<=4
+									AND mm.sum_all>=2  AND top.top_flag=1 
+									AND dish.dish_num>0
+									#AND conn.member_id ='22995'
+									GROUP BY conn.member_id,dish.`dish_id`
+									#HAVING `percent`>50
+									ORDER BY percent DESC,con_sum DESC ,order1 DESC
+									) a
+									GROUP BY member_id) d ON d.member_id=z.member_id) a
+									WHERE (a.percent1 +a.percent2+a.percent3+a.percent4) !=0 ) a WHERE member_id NOT IN (SELECT member_id FROM `member_fav_dish`)
+
+
+——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+高配重复点选：
+
+INSERT INTO  `member_fav_dish`
+		            ( 
+		             `member_id`,
+		             `dish_id`,
+		             `dish_name`,
+		             `dish_raw`,
+		             `percent`,
+		             `flag`,
+		             dish_type
+		             )
+
+
+
+
+SELECT a.member_Id,
+																			CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN z
+																			ELSE
+																				CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN c
+																				ELSE
+																					CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN v
+																					ELSE b
+																					END
+																				END
+																			END AS dish_id,
+																			CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN dish_name1
+																			ELSE
+																				CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN dish_name2
+																				ELSE
+																					CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN dish_name3
+																					ELSE dish_name4
+																					END
+																				END
+																			END AS 'dish_name',
+																			CASE WHEN a1>0 THEN a1
+																				ELSE CASE WHEN a2>0 THEN a2
+																					ELSE CASE WHEN a3>0 THEN a3 
+																						ELSE a4 
+																						END 
+																				END 
+																			END AS '点选次数',
+																			CASE WHEN percent1>=percent2/1.5 AND percent1>=percent3/(1.5 *1.5) AND percent1>=percent4/(1.5 *1.5*1.5) THEN percent1
+																			ELSE
+																				CASE WHEN percent2/1.5 >percent1 AND percent2 >=percent3/(1.5) AND percent2 >=percent4/(1.5*1.5) THEN percent2
+																				ELSE
+																					CASE WHEN percent3/(1.5*1.5) > percent1 AND percent3/(1.5) >percent2 AND percent3 >=percent4/1.5 THEN percent3
+																					ELSE percent4
+																					END
+																				END
+																			END AS 'percent',1 AS flag, '高配重复点选' AS dish_type
+																					
+																			 FROM 
+
+																			(SELECT z.member_id,a.dish_id AS z,b.dish_id AS c,c.dish_id AS v,d.dish_id AS b,
+																			a.dish_raw AS a1,b.dish_raw AS a2 ,c.dish_raw AS a3,d.dish_raw AS a4,
+																			IFNULL(a.dish_name1,0) AS dish_name1,IFNULL(a.percent1,0)AS percent1,IFNULL(b.dish_name2,0)AS dish_name2,
+																			IFNULL(b.percent2,0) AS percent2,IFNULL(c.dish_name3,0) AS dish_name3,
+																			IFNULL(c.percent3,0) AS percent3,IFNULL(d.dish_name4,0) AS dish_name4,
+																			IFNULL(d.percent4,0) AS percent4 FROM  `member_tag_summary`AS z LEFT JOIN
+																			#top1	
+																				(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name1,a.dish_raw,a.percent AS percent1,a.flag,a.dish_type FROM 
+																					(
+																					SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+																					SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum  ,1  AS `flag` ,  
+																					'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+																					INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+																					INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+																					INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+																					INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top1 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+																													LEFT JOIN (
+												SELECT * FROM (
+												SELECT member_id,LEFT(bill_date,10),GROUP_CONCAT(dish_name) AS fact_name FROM (
+												SELECT conn.`member_id`,dish.`dish_name`,conn.`bill_date`,conn.`people_num`,conn.`need_pay_amount`,dish.after_discount_amount
+												FROM   `pos_consumption1` AS conn 
+												INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+												INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+												#AND tag.main_flag=1
+												WHERE  conn.member_id<>0 
+												#AND conn.need_pay_amount/conn.people_num>@avg_shop
+												#AND conn.people_num>=2 and conn.people_num<=4
+												#AND mm.zcount>=2 
+												#and tag.main_flag=1 
+												#and tag.top_type<>'锅底' 
+												#and tag.dish_raw is not null
+												)a
+												GROUP BY member_id,LEFT(bill_date,10)
+												ORDER BY member_id,LEFT(bill_date,10) DESC) a
+												GROUP BY member_id) b ON conn .member_id=b.member_id
+														WHERE 
+														 conn.people_num<=4
+														 AND b.fact_name LIKE CONCAT('%',dish.dish_name,'%')
+														AND mm.sum_all>=2  AND top.top_flag=1 
+														AND dish.dish_num>0
+														#AND conn.member_id ='22995'
+														GROUP BY conn.member_id,dish.`dish_id`
+														HAVING `percent`>50
+														ORDER BY percent DESC,con_sum DESC ,order1 DESC
+														) a  
+												GROUP BY member_id) a  ON a.member_id=z.member_id
+																			LEFT JOIN 
+																			#top2
+																					(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name2,a.dish_raw,a.percent AS percent2,a.flag,a.dish_type FROM 
+																					(
+																					SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+																					SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum  ,1  AS `flag` ,  
+																					'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+																					INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+																					INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+																					INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+																					INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum  ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top2 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+																													LEFT JOIN (
+												SELECT * FROM (
+												SELECT member_id,LEFT(bill_date,10),GROUP_CONCAT(dish_name) AS fact_name FROM (
+												SELECT conn.`member_id`,dish.`dish_name`,conn.`bill_date`,conn.`people_num`,conn.`need_pay_amount`,dish.after_discount_amount
+												FROM   `pos_consumption1` AS conn 
+												INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+												INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+												#AND tag.main_flag=1
+												WHERE  conn.member_id<>0 
+												#AND conn.need_pay_amount/conn.people_num>@avg_shop
+												#AND conn.people_num>=2 and conn.people_num<=4
+												#AND mm.zcount>=2 
+												#and tag.main_flag=1 
+												#and tag.top_type<>'锅底' 
+												#and tag.dish_raw is not null
+												)a
+												GROUP BY member_id,LEFT(bill_date,10)
+												ORDER BY member_id,LEFT(bill_date,10) DESC) a
+												GROUP BY member_id) b ON conn .member_id=b.member_id
+														WHERE 
+														 conn.people_num<=4
+														 AND b.fact_name LIKE CONCAT('%',dish.dish_name,'%')
+														AND mm.sum_all>=2  AND top.top_flag=1 
+														AND dish.dish_num>0
+														#AND conn.member_id ='22995'
+														GROUP BY conn.member_id,dish.`dish_id`
+														HAVING `percent`>(50+49)
+														ORDER BY percent DESC,con_sum DESC ,order1 DESC
+														) a  
+												GROUP BY member_id) b ON  b.member_id=z.member_id
+																					
+																			LEFT JOIN 		
+																			#top3
+																					(SELECT a.member_id,a.dish_id, a.dish_name AS dish_name3,a.dish_raw,a.percent AS percent3,a.flag,a.dish_type FROM 
+																					(
+																					SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+																					SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum  ,1  AS `flag` ,  
+																					'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+																					INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+																					INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+																					INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+																					INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top3 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+																													LEFT JOIN (
+												SELECT * FROM (
+												SELECT member_id,LEFT(bill_date,10),GROUP_CONCAT(dish_name) AS fact_name FROM (
+												SELECT conn.`member_id`,dish.`dish_name`,conn.`bill_date`,conn.`people_num`,conn.`need_pay_amount`,dish.after_discount_amount
+												FROM   `pos_consumption1` AS conn 
+												INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+												INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+												#AND tag.main_flag=1
+												WHERE  conn.member_id<>0 
+												#AND conn.need_pay_amount/conn.people_num>@avg_shop
+												#AND conn.people_num>=2 and conn.people_num<=4
+												#AND mm.zcount>=2 
+												#and tag.main_flag=1 
+												#and tag.top_type<>'锅底' 
+												#and tag.dish_raw is not null
+												)a
+												GROUP BY member_id,LEFT(bill_date,10)
+												ORDER BY member_id,LEFT(bill_date,10) DESC) a
+												GROUP BY member_id) b ON conn .member_id=b.member_id
+														WHERE 
+														 conn.people_num<=4
+														 AND b.fact_name LIKE CONCAT('%',dish.dish_name,'%')
+														AND mm.sum_all>=2  AND top.top_flag=1 
+														AND dish.dish_num>0
+														#AND conn.member_id ='22995'
+														GROUP BY conn.member_id,dish.`dish_id`
+														HAVING `percent`>(50+49)
+														ORDER BY percent DESC,con_sum DESC ,order1 DESC
+														) a  
+												GROUP BY member_id) AS c ON c.member_id=z.member_id
+
+																			#top4		
+																			LEFT JOIN (		SELECT a.member_id,a.dish_id, a.dish_name AS dish_name4,a.dish_raw,a.percent AS percent4,a.flag,a.dish_type FROM 
+																					(
+																					SELECT conn.member_id,dish.`dish_id`,top.dish_name,COUNT(0) AS dish_raw,top.order1 ,
+																					SUM(dish.dish_num)/mm.sum_all * 100 AS `percent`,top.con_sum  ,1  AS `flag` ,  
+																					'重复点选' AS dish_type FROM   `pos_consumption1` AS conn 
+																					INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+																					INNER JOIN `member_tag_summary` AS mm ON mm.`member_id`=conn.`member_id`
+																					INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+																					INNER JOIN (SELECT a.dish_id,a.dish_name,b.con_sum  ,a.top_flag,a.order1  FROM `pos_dish_tag` AS a INNER JOIN top4 AS b ON a.dish_id=b.dish_id WHERE main_flag=1 ) AS top ON top.dish_id =dish.dish_id
+																													LEFT JOIN (
+												SELECT * FROM (
+												SELECT member_id,LEFT(bill_date,10),GROUP_CONCAT(dish_name) AS fact_name FROM (
+												SELECT conn.`member_id`,dish.`dish_name`,conn.`bill_date`,conn.`people_num`,conn.`need_pay_amount`,dish.after_discount_amount
+												FROM   `pos_consumption1` AS conn 
+												INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+												INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+												#AND tag.main_flag=1
+												WHERE  conn.member_id<>0 
+												#AND conn.need_pay_amount/conn.people_num>@avg_shop
+												#AND conn.people_num>=2 and conn.people_num<=4
+												#AND mm.zcount>=2 
+												#and tag.main_flag=1 
+												#and tag.top_type<>'锅底' 
+												#and tag.dish_raw is not null
+												)a
+												GROUP BY member_id,LEFT(bill_date,10)
+												ORDER BY member_id,LEFT(bill_date,10) DESC) a
+												GROUP BY member_id) b ON conn .member_id=b.member_id
+														WHERE 
+														 conn.people_num<=4
+														 AND b.fact_name LIKE CONCAT('%',dish.dish_name,'%')
+														AND mm.sum_all>=2  AND top.top_flag=1 
+														AND dish.dish_num>0
+														#AND conn.member_id ='22995'
+														GROUP BY conn.member_id,dish.`dish_id`
+														HAVING `percent`>(50+49)
+														ORDER BY percent DESC,con_sum DESC ,order1 DESC
+														) a  
+												GROUP BY member_id) d ON d.member_id=z.member_id) a
+												
+																					WHERE (a.percent1 +a.percent2+a.percent3+a.percent4) !=0
+																					AND  a.member_id NOT IN (SELECT member_id FROM `member_fav_dish`)
