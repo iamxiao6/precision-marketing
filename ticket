@@ -1,0 +1,68 @@
+领取票券情况：
+
+SELECT  ticket.created_on AS get_date,
+    ticket.member_id,
+    ticket.wx_ticket_type_id AS cardid,
+        ticket.ticket_type_name AS name1
+    FROM (
+    SELECT  tt.created_on,
+    tt.ticket_id,
+    tt.member_id,
+    tt.ticket_type_id,
+    tt.consume_no,
+    ttt.wx_ticket_type_id,
+    ttt.ticket_type_name,
+    ttts.strategy_name
+    FROM ti_ticket tt 
+    INNER JOIN ti_ticket_type ttt ON tt.ticket_type_id=ttt.ticket_type_id
+    LEFT JOIN ti_ticket_strategy ttts ON ttts.ticket_strategy_id=tt.ticket_strategy_id AND ttts.status_code=1
+    LEFT JOIN rv_bi_organization AS bo ON bo.organization_id = tt.consumption_org
+    WHERE tt.status_code=1
+    AND ttt.is_wx_ticket=1
+    AND tt.give_fans_id=0 
+    AND tt.created_on BETWEEN '2018-01-10'  AND  '2018-02-31'
+    #and ttt.created_on between '2017-08-03 00:00:00' and '2017-08-06 00:00:00'
+    AND ttt.wx_ticket_type_id !=781  
+    ) ticket
+    
+    ————————————————————————————————————————————————————————————————————————————————
+    使用票券情况：
+    SELECT  ticket.bill_date AS use_date,
+    ticket.wx_ticket_type_id cardid,
+                 ticket.member_id,
+                 ticket.ticket_type_name AS name1,
+                 ticket.money,
+                 ticket.people_num
+                 
+                 FROM
+                 (
+                 SELECT  ps.bill_date,
+                 tt.created_on,
+                 tt.ticket_id,
+                 tt.member_id,
+                 IF(ISNULL(of.nick_name),'-',of.nick_name) nick_name,
+                 tt.consume_no,
+                 tt.ticket_type_id,
+                 tt.consumption_org,
+                 ttt.wx_ticket_type_id,
+                 ttt.ticket_type_name,
+                 ttts.strategy_name,
+                 ps.serial_number,
+                 ps.money,
+                 ps.people_num,
+                 
+                 bo.organization_name
+                 FROM rv_ti_ticket tt
+                 INNER JOIN rv_ti_ticket_type  ttt ON tt.ticket_type_id=ttt.ticket_type_id
+                 LEFT JOIN pos_consumption ps ON tt.consumption_id=ps.consumption_id AND tt.consumption_org=ps.created_org
+                 LEFT JOIN rv_ti_ticket_strategy ttts ON ttts.ticket_strategy_id=tt.ticket_strategy_id AND ttts.status_code=1
+                 LEFT JOIN rv_bi_organization AS bo ON bo.organization_id = tt.consumption_org
+                 LEFT JOIN rv_ol_fans of ON tt.fans_id=of.fans_id
+                 WHERE tt.status_code=1
+                 AND tt.ticket_status=3
+                 AND ttt.is_wx_ticket=1
+                 AND tt.use_date BETWEEN '2018-01-10'  AND  '2018-02-31'
+                 AND tt.valid_begin_date BETWEEN '2018-01-10'  AND  '2018-02-31'
+                AND ttt.wx_ticket_type_id !=781 
+                 ) ticket
+                 WHERE money IS NOT NULL
