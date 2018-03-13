@@ -1,0 +1,216 @@
+USE 0001790455_pos;
+
+SELECT b.organization_name AS '店名',a.eat_type,占比 FROM (
+SELECT a.*,ROUND(a.c/b.sum_all,2) AS '占比' FROM 
+(SELECT CASE WHEN people_num =1 THEN '单人' ELSE
+CASE WHEN people_num =2  THEN '双人' ELSE 
+CASE WHEN people_num IN(3,4,5) THEN '三至五人'
+ELSE '聚餐' END END END AS eat_type,SUM(c)AS c,created_org   FROM (
+
+SELECT people_num,COUNT(1) AS c,created_org FROM pos_consumption
+WHERE status_code=1 
+GROUP BY created_org,people_num) a
+GROUP BY created_org,eat_type)a LEFT JOIN (
+SELECT created_org,COUNT(1) AS sum_all FROM pos_consumption 
+WHERE status_code=1
+GROUP BY created_org )b ON a.created_org =b.created_org
+ORDER BY FIELD(eat_type,'单人','双人','三至五人','聚餐')) a INNER JOIN (SELECT created_on,organization_name,organization_id FROM 0001790455_baseinfo.bi_organization 
+WHERE status_code=1) b ON a.created_org=b.organization_id
+ORDER BY 店名,FIELD(eat_type,'单人','双人','三至五人','聚餐');
+
+#工作日和周末订单情况
+SELECT c.organization_name AS '店名',timetype,count_all AS '订单总数',ROUND(count_all/sum_all,2) AS '占比' ,ROUND(pay,0) AS '平均客单价'  FROM (
+SELECT CASE WHEN time1 IN (11,12,13) AND xx =1 THEN '工作日中午' ELSE 
+CASE WHEN time1 BETWEEN '17' AND '21' AND xx =1 THEN '工作日晚上' ELSE 
+CASE WHEN time1 IN (00,01,02,03,04,23) AND xx =1 THEN '工作日夜宵' ELSE 
+CASE WHEN time1 IN (9,10,15,16) AND xx =1 THEN '工作日闲时' ELSE 
+CASE WHEN time1 IN (11,12,13) AND xx =2 THEN '周末中午' ELSE 
+CASE WHEN time1 BETWEEN '17' AND '21' AND xx =2  THEN '周末晚上' ELSE 
+CASE WHEN time1 IN (00,01,02,03,04,23) AND xx =2 THEN '周末夜宵' ELSE 
+CASE WHEN time1 IN (09,10,15,16) AND xx =2 THEN '周末闲时'   END END END END END END END END AS timetype,SUM(count1) AS count_all ,AVG(pay)AS pay ,created_org FROM (
+
+SELECT SUBSTRING(created_on,12,2) AS time1 ,1 AS xx,COUNT(1) AS count1 ,AVG(need_pay_amount) AS pay ,created_org FROM pos_consumption
+WHERE DAYOFWEEK(bill_date) IN (2,3,4,5)
+AND status_code=1
+GROUP BY created_org ,SUBSTRING(created_on,12,2)
+UNION ALL
+SELECT SUBSTRING(created_on,12,2)  AS time2 ,2 AS xx, COUNT(1) AS count2,AVG(need_pay_amount) AS pay,created_org  FROM pos_consumption
+WHERE DAYOFWEEK(bill_date) IN (1,6,7)
+AND status_code=1
+GROUP BY created_org ,SUBSTRING(created_on,12,2))a
+GROUP BY created_org ,timetype )a LEFT JOIN 
+(SELECT COUNT(1) AS sum_all ,created_org  FROM pos_consumption WHERE status_code=1 GROUP BY created_org  )b ON a.created_org=b.created_org
+LEFT JOIN (SELECT created_on,organization_name,organization_id FROM 0001790455_baseinfo.bi_organization 
+WHERE status_code=1) c ON a.created_org=c.organization_id;
+
+
+
+#老客占比
+SELECT b.organization_name AS '店名',a.member_type,a.统计总数,a.占比 FROM (
+SELECT a.created_org,CASE WHEN c IN(1) THEN '新客' ELSE '老客' END AS member_type,COUNT(1) AS '统计总数',ROUND(COUNT(1)/b.sum_all,2) AS '占比' FROM (
+SELECT member_id,COUNT(1) AS c ,created_org FROM pos_consumption
+WHERE status_code=1
+AND member_id <>0
+AND member_id <>1
+GROUP BY member_id,created_org) a LEFT JOIN (SELECT COUNT(DISTINCT member_id) AS sum_all,created_org FROM pos_consumption WHERE status_code=1
+AND member_id <>0
+AND member_id <>1
+GROUP BY created_org) b ON a.created_org=b.created_org
+GROUP BY a.created_org,member_type ) a LEFT JOIN (SELECT created_on,organization_name,organization_id FROM 0001790455_baseinfo.bi_organization 
+WHERE status_code=1) b ON a.created_org=b.organization_id;
+
+#查看时间点的消费情况(按订单创建时间)----周末
+SELECT b.organization_name AS '店名',SUBSTRING(a.created_on,12,2) AS'周末时间点',COUNT(1) AS'总订单数',ROUND(AVG(need_pay_amount),0) AS '平均每单应付',ROUND(AVG(people_num),1)AS '平均每单人数',ROUND(SUM(need_pay_amount)/SUM(people_num),0)AS'人均消费'  FROM pos_consumption a INNER JOIN (SELECT created_on,organization_name,organization_id FROM 0001790455_baseinfo.bi_organization 
+WHERE status_code=1) b ON a.created_org=b.organization_id
+WHERE a.status_code=1
+AND DAYOFWEEK(bill_date) IN (1,6,7)
+#and a.created_org=3 #要查的商家名字
+GROUP BY a.created_org,SUBSTRING(a.created_on,12,2);
+
+
+
+#查看时间点的消费情况(按订单创建时间)----工作日
+SELECT b.organization_name AS '店名',SUBSTRING(a.created_on,12,2) AS'工作日时间点',COUNT(1) AS'总订单数',ROUND(AVG(need_pay_amount),0) AS '平均每单应付',ROUND(AVG(people_num),1)AS '平均每单人数',ROUND(SUM(need_pay_amount)/SUM(people_num),0)AS'人均消费'  FROM pos_consumption a INNER JOIN (SELECT created_on,organization_name,organization_id FROM 0001790455_baseinfo.bi_organization 
+WHERE status_code=1) b ON a.created_org=b.organization_id
+WHERE a.status_code=1
+AND DAYOFWEEK(bill_date) IN (1,6,7)
+#and a.created_org=3 #要查的商家名字
+GROUP BY a.created_org,SUBSTRING(a.created_on,12,2);
+
+
+##日期间隔
+SELECT a.sum_all,b.count_all,ROUND(b.count_all/a.sum_all,2) FROM 
+			(SELECT COUNT(1) AS sum_all FROM (
+
+			SELECT a.member_id,a.sum_all,IFNULL(b.count_all,0),IFNULL(ROUND(b.count_all/a.sum_all,2),0) AS percent FROM (SELECT member_ID,COUNT(1) AS sum_all FROM (SELECT member_id,rank,starttime,endtime,DATEDIFF(endtime,starttime) AS days FROM (
+			SELECT a.member_id,a.rank,a.bill_date AS starttime,b.bill_date AS endtime FROM (
+			SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=1
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10  AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a
+			) a LEFT JOIN (SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=0
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10 AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a) b ON a.member_Id=b.member_id AND a.rank=b.rank
+			WHERE b.rank IS NOT NULL)a
+
+			)a
+			GROUP BY MEMBER_ID ) a LEFT JOIN (SELECT member_ID,COUNT(1) AS count_all FROM (SELECT member_id,rank,starttime,endtime,DATEDIFF(endtime,starttime) AS days FROM (
+			SELECT a.member_id,a.rank,a.bill_date AS starttime,b.bill_date AS endtime FROM (
+			SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=1
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10  AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a
+			) a LEFT JOIN (SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=0
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10 AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a) b ON a.member_Id=b.member_id AND a.rank=b.rank
+			WHERE b.rank IS NOT NULL)a
+
+			)a
+			WHERE days>(SELECT SUM(porder_date_calc.datedif)/SUM(porder_date_calc.con_cou) *1.5  FROM (
+			SELECT DATEDIFF(MAX(porder.bill_date), MIN(porder.bill_date)) AS datedif,COUNT(0)-1 AS con_cou
+			FROM `pos_consumption` AS porder
+			INNER JOIN `rv_ol_fans` AS fan ON fan.`member_id` = porder.member_id
+			WHERE porder.status_code=1
+			AND porder.member_ID>10
+			GROUP BY porder.member_id
+			HAVING COUNT(0)>1
+			)
+			AS porder_date_calc)
+			GROUP BY MEMBER_ID
+			) b ON a.member_id=b.member_id )a)a ,(SELECT COUNT(1) AS count_all FROM (SELECT a.member_id,a.sum_all,IFNULL(b.count_all,0),IFNULL(ROUND(b.count_all/a.sum_all,2),0) AS percent FROM (SELECT member_ID,COUNT(1) AS sum_all FROM (SELECT member_id,rank,starttime,endtime,DATEDIFF(endtime,starttime) AS days FROM (
+			SELECT a.member_id,a.rank,a.bill_date AS starttime,b.bill_date AS endtime FROM (
+			SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=1
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10  AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a
+			) a LEFT JOIN (SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=0
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10 AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a) b ON a.member_Id=b.member_id AND a.rank=b.rank
+			WHERE b.rank IS NOT NULL)a
+
+			)a
+			GROUP BY MEMBER_ID ) a LEFT JOIN (SELECT member_ID,COUNT(1) AS count_all FROM (SELECT member_id,rank,starttime,endtime,DATEDIFF(endtime,starttime) AS days FROM (
+			SELECT a.member_id,a.rank,a.bill_date AS starttime,b.bill_date AS endtime FROM (
+			SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=1
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10  AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a
+			) a LEFT JOIN (SELECT member_id,rank,bill_date,people_num,fact_name FROM (
+			SELECT member_id,CASE 
+			WHEN @member_id =member_id THEN @rr:=@rr+1
+			ELSE @rr:=0
+			END   AS rank,bill_date,people_num,fact_name,@member_id :=member_id  FROM (
+			SELECT conn.member_id,conn.bill_date,conn.people_num,GROUP_CONCAT(dish.dish_name) AS fact_name
+			FROM   `pos_consumption` AS conn 
+			INNER JOIN pos_dining_order AS porder ON conn.consumption_id = porder.consumption_id AND conn.created_org = porder.created_org
+			INNER JOIN pos_order_dish AS dish ON porder.order_id=dish.dining_order_id AND dish.created_org=porder.created_org
+			WHERE conn.member_id >10 AND conn.status_code=1
+			GROUP BY member_id,bill_date )a)a) b ON a.member_Id=b.member_id AND a.rank=b.rank
+			WHERE b.rank IS NOT NULL)a
+
+			)a
+			WHERE days>(SELECT SUM(porder_date_calc.datedif)/SUM(porder_date_calc.con_cou) *1.5  FROM (
+			SELECT DATEDIFF(MAX(porder.bill_date), MIN(porder.bill_date)) AS datedif,COUNT(0)-1 AS con_cou
+			FROM `pos_consumption` AS porder
+			INNER JOIN `rv_ol_fans` AS fan ON fan.`member_id` = porder.member_id
+			WHERE porder.status_code=1
+			AND porder.member_ID>10
+			GROUP BY porder.member_id
+			HAVING COUNT(0)>1
+			)
+			AS porder_date_calc)
+			GROUP BY MEMBER_ID
+			) b ON a.member_id=b.member_id 
+			WHERE IFNULL(ROUND(b.count_all/a.sum_all,2),0)>0.5) b) b
