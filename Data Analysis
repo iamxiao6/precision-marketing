@@ -1,0 +1,37 @@
+#用户分类的领取率,核销率,转化率
+SELECT a.member_con_type,a.send AS '发送人数',b.get AS '领取人数',c.useer AS '使用人数' ,IFNULL(ROUND(b.get/a.send,4),0) AS '领取率',IFNULL(ROUND(c.useer/b.get,4),0) AS '核销率',
+IFNULL(ROUND(c.useer/a.send,4),0) AS '转化率'
+FROM (SELECT member_con_type,COUNT(1) AS send FROM `dish_tag_end`
+GROUP BY member_con_type
+) a INNER JOIN (SELECT a.member_con_type,COUNT(1) AS get FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberget) b ON a.member_id=b.member_id
+GROUP BY a.member_con_type) b ON a.member_con_type=b.member_con_type
+INNER JOIN (SELECT a.member_con_type,COUNT(1) AS useer FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberuse) b ON a.member_id=b.member_id
+GROUP BY a.member_con_type) c ON a.member_con_type=c.member_con_type ;
+
+
+#用户分类的领取率,核销率,转化率
+SELECT a.member_con_type,a.reason,a.send AS '发送人数',b.get AS '领取人数',c.useer AS '使用人数' ,IFNULL(ROUND(b.get/a.send,4),0) AS '领取率',IFNULL(ROUND(c.useer/b.get,4),0) AS '核销率',
+IFNULL(ROUND(c.useer/a.send,4),0) AS '转化率'
+FROM (SELECT member_con_type,reason,COUNT(1) AS send FROM `dish_tag_end`
+GROUP BY member_con_type,reason
+) a INNER JOIN (SELECT a.member_con_type,reason,COUNT(1) AS get FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberget) b ON a.member_id=b.member_id
+GROUP BY a.member_con_type,reason) b ON a.member_con_type=b.member_con_type AND a.reason=b.reason
+INNER JOIN (SELECT a.member_con_type,reason,COUNT(1) AS useer FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberuse) b ON a.member_id=b.member_id
+GROUP BY a.member_con_type,reason) c ON a.member_con_type=c.member_con_type AND a.reason=c.reason;
+
+
+#用户分类的领取率,核销率,转化率
+SELECT a.reason,a.send AS '发送人数',b.get AS '领取人数',c.useer AS '使用人数' ,IFNULL(ROUND(b.get/a.send,4),0) AS '领取率',IFNULL(ROUND(c.useer/b.get,4),0) AS '核销率',
+IFNULL(ROUND(c.useer/a.send,4),0) AS '转化率'
+FROM (SELECT reason,COUNT(1) AS send FROM `dish_tag_end`
+GROUP BY reason
+) a INNER JOIN (SELECT a.member_con_type,reason,COUNT(1) AS get FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberget) b ON a.member_id=b.member_id
+GROUP BY reason) b ON  a.reason=b.reason
+INNER JOIN (SELECT reason,COUNT(1) AS useer FROM `dish_tag_end` a INNER JOIN (SELECT DISTINCT member_id FROM memberuse) b ON a.member_id=b.member_id
+GROUP BY reason) c ON  a.reason=c.reason;
+
+
+UPDATE `dish_tag_end` SET member_con_type ='沉睡用户'
+WHERE member_con_type LIKE '沉睡%'
+
+
