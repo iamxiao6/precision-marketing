@@ -1,0 +1,27 @@
+DELIMITER $$
+
+USE `0005285040_pos`$$
+
+DROP VIEW IF EXISTS `rv_ol_fans_sns_bind`$$
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`127.0.0.1` SQL SECURITY DEFINER VIEW `rv_ol_fans_sns_bind` AS 
+SELECT
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`fans_sns_bind_id`  AS `fans_sns_bind_id`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`fans_id`           AS `fans_id`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`sns_type`          AS `sns_type`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`open_id`           AS `open_id`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`union_id`          AS `union_id`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`app_id`            AS `app_id`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`is_subscribed`     AS `is_subscribed`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`subscribed_time`   AS `subscribed_time`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`unsubscribed_time` AS `unsubscribed_time`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`created_org`       AS `created_org`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`created_by`        AS `created_by`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`created_on`        AS `created_on`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`modified_by`       AS `modified_by`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`modified_on`       AS `modified_on`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`status_code`       AS `status_code`,
+  `0005285040_baseinfo`.`ol_fans_sns_bind`.`sync_status`       AS `sync_status`
+FROM `0005285040_baseinfo`.`ol_fans_sns_bind`$$
+
+DELIMITER ;
