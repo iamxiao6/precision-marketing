@@ -1,0 +1,136 @@
+
+TRUNCATE TABLE `dish_tag_end`
+
+SELECT member_id,dish_id,dish_name,dish_price,money,usemoney FROM `dish_tag_end`
+WHERE dish_name LIKE '%代金券%'
+GROUP BY money
+ORDER BY money
+
+#观察数据
+SELECT * FROM `dish_tag_end`
+#where dish_price <money
+GROUP BY dish_name,money,usemoney
+
+UPDATE dish_tag_end SET dish_name = CONCAT(dish_name,'+鳗鱼寿司'),dish_price=dish_price+15 WHERE dish_name NOT LIKE '代金券%' AND dish_name LIKE '三文鱼%' AND money-dish_price >=10
+
+UPDATE dish_tag_end SET dish_name = CONCAT(dish_name,'+三文鱼寿司'),dish_price=dish_price+13 WHERE dish_name NOT LIKE '代金券%' AND dish_name NOT  LIKE '三文鱼%' AND money-dish_price >=10
+
+UPDATE dish_tag_end SET usemoney =ROUND(money*3,-1)+8 WHERE dish_name NOT LIKE '代金券%'
+
+#将使用门槛在菜品价以下的改为菜品价
+UPDATE dish_tag_end1 SET usemoney=dish_price ,money=fun_get_round_5(dish_price ,0.25 ,0)
+WHERE dish_price>usemoney
+
+UPDATE dish_tag_end SET money=dish_price 
+WHERE money >dish_price
+AND dish_name NOT LIKE '代金券%'
+
+
+UPDATE dish_tag_end SET money=dish_price WHERE ABS(dish_price-money) <=8
+
+UPDATE dish_tag_end SET usemoney=598 WHERE dish_name='代金券7'
+
+UPDATE dish_tag_end1 SET dish_name ='代金券1' WHERE money=20 AND dish_name = '代金券';
+UPDATE dish_tag_end1 SET dish_name ='代金券2' WHERE money=30 AND dish_name = '代金券';
+UPDATE dish_tag_end1 SET dish_name ='代金券3' WHERE money=40 AND dish_name = '代金券';
+UPDATE dish_tag_end1 SET dish_name ='代金券4' WHERE money=50 AND dish_name = '代金券';
+UPDATE dish_tag_end1 SET dish_name ='代金券5' WHERE money=70 AND dish_name = '代金券';
+UPDATE dish_tag_end1 SET dish_name ='代金券6' WHERE money=100 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券7' WHERE money=200 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券8' WHERE money=300 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券9' WHERE money=50 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券10' WHERE money=55 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券11' WHERE money=60 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券12' WHERE money=65 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券13' WHERE money=70 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券14' WHERE money=75 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券15' WHERE money=80 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券16' WHERE money=85 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券17' WHERE money=90 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券18' WHERE money=95 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券19' WHERE money=100 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券20' WHERE money=120 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券21' WHERE money=140 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券22' WHERE money=160 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券23' WHERE money=180 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券24' WHERE money=140 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券25' WHERE money=150 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券26' WHERE money=160 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券27' WHERE money=170 AND dish_name = '代金券';
+UPDATE dish_tag_end SET dish_name ='代金券28' WHERE money=180 AND dish_name = '代金券';
+
+
+
+UPDATE `dish_tag_end` SET money =(
+CASE WHEN money BETWEEN 15 AND 25 THEN 20
+	WHEN money BETWEEN 5 AND 10 THEN 10
+	WHEN money BETWEEN 50 AND 65 THEN 50
+	WHEN money BETWEEN 70 AND 95 THEN 70
+	WHEN money BETWEEN 100 AND 199 THEN 100
+	
+	WHEN money BETWEEN 200 AND 299 THEN 200
+	WHEN money BETWEEN 300 AND 399 THEN 300
+	ELSE money END )
+	WHERE reason LIKE'%聚餐点选%'
+
+UPDATE `dish_tag_end` SET usemoney=98 WHERE usemoney=94
+#___________________________________________________________________________________________________
+SELECT dish_name AS '推荐内容',COUNT(1) AS '数量',dish_price AS'原价',money AS '优惠额',
+CASE WHEN dish_name LIKE '代金券%' THEN '代金券'
+ELSE CASE WHEN dish_price > money THEN '抵扣券'
+	ELSE '实物券' END
+END AS '票券类型',
+usemoney AS'使用门槛',SUM(money) AS'优惠总额' ,
+CASE WHEN usemoney < @avg_peo THEN 1-money/@avg_peo 
+ELSE 1-money/usemoney END AS '等同折扣'
+FROM dish_tag_end1
+GROUP BY dish_name,usemoney,money
+
+SELECT @avg_peo;
+
+SELECT 1-SUM(money)/SUM(t) AS '总体折扣' FROM (SELECT member_id,money,CASE WHEN usemoney < @avg_peo THEN @avg_peo ELSE usemoney END AS t FROM `dish_tag_end`) a ;
+
+
+
+DELETE FROM dish_tag_end1
+WHERE reason='测试'
+
+INSERT INTO `dish_tag_end1`
+
+SELECT a.member_id,a.open_id,a.sum_all,a.motive,a.member_con_type,a.dish_id,'代金券2' AS  dish_name, '测试'  AS reason,0 AS dish_price, 35 AS money,128 AS usemoney
+FROM dish_tag_end1 a
+WHERE member_id NOT IN (SELECT member_id FROM dish_tag_end WHERE money=35 AND dish_name LIKE '%代金券%')
+
+
+SELECT * FROM `dish_tag_end`
+WHERE dish_name IN('手撕包菜','养生秋葵')
+
+UPDATE `dish_tag_end` SET dish_name='代金券',reason='代金券',dish_price=0,money=50,usemoney=168
+WHERE dish_name IN('手撕包菜','养生秋葵')
+
+UPDATE `dish_tag_end` SET reason='代金券' WHERE dish_name ='代金券'
+UPDATE `dish_tag_end` SET reason='物品协同' WHERE reason LIKE '猜你喜欢2%'
+
+SELECT DISTINCT reason FROM dish_tag_end
+
+
+UPDATE `dish_tag_end` SET usemoney=ROUND(money/0.15,-2)-2 WHERE dish_name LIKE '代金券%'
+
+
+
+CREATE TABLE ss LIKE `dish_tag_end`
+ALTER TABLE ss ADD COLUMN weeks VARCHAR(255)
+
+UPDATE ss SET member_con_type ='忠沉' WHERE member_con_type LIKE '忠诚%';
+UPDATE ss SET member_con_type ='忠沉' WHERE member_con_type LIKE '沉睡%';
+UPDATE ss SET member_con_type ='普流' WHERE member_con_type LIKE '普通%';
+UPDATE ss SET member_con_type ='普流' WHERE member_con_type LIKE '流失%';
+UPDATE ss SET member_con_type ='陪潜' WHERE member_con_type LIKE '陪同%';
+UPDATE ss SET member_con_type ='陪潜' WHERE member_con_type LIKE '潜在%';
+
+
+
+
+SELECT member_con_type ,reason,weeks,COUNT(1) AS '用户数',COUNT(DISTINCT dish_name) AS '标签数' FROM ss
+GROUP BY member_con_type,reason,weeks
+ORDER BY FIELD(member_con_type,'忠沉','普流','陪潜'),FIELD(reason,'重复点选','聚餐点选','热销菜品'),FIELD(weeks,'工作日中午','工作日晚上','周末中午','周末晚上')
