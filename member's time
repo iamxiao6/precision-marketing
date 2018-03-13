@@ -1,0 +1,183 @@
+
+
+
+
+
+
+#各个时间段的用户偏好时间点情况
+
+SELECT a.*,ROUND(eatcount/allcount,2) AS '消费次数占比' FROM 
+(
+SELECT member_id,
+CASE WHEN weekdaynoon> weekdayevening AND weekdaynoon >weekendnoon AND weekdaynoon > weekendevening THEN '工作日中午'
+ELSE CASE WHEN weekendnoon >=weekdaynoon AND weekendnoon>weekendevening AND weekendnoon>weekdayevening THEN'周末中午'
+	ELSE CASE WHEN weekdayevening>=weekdaynoon AND weekdayevening>=weekendnoon AND weekdayevening>weekendevening THEN '工作日晚上'
+		ELSE CASE WHEN weekendevening>=weekdaynoon  AND weekendevening>=weekendnoon AND weekendevening>=weekdayevening THEN '周末晚上' 
+		END
+	END
+END
+END  AS 'eattime',
+CASE WHEN weekdaynoon> weekdayevening AND weekdaynoon >weekendnoon AND weekdaynoon > weekendevening THEN weekdaynoon
+ELSE CASE WHEN weekendnoon >=weekdaynoon AND weekendnoon>weekendevening AND weekendnoon>weekdayevening THEN weekendnoon
+	ELSE CASE WHEN weekdayevening>=weekdaynoon AND weekdayevening>=weekendnoon AND weekdayevening>weekendevening THEN weekdayevening
+		ELSE CASE WHEN weekendevening>=weekdaynoon  AND weekendevening>=weekendnoon AND weekendevening>=weekdayevening THEN weekendevening 
+		END
+	END
+END
+END  AS 'eatcount',
+allcount 
+FROM (
+SELECT a.member_Id,IFNULL(a.allcount,0) AS 'allcount',
+IFNULL(b.weekdaynoon,0) AS 'weekdaynoon',IFNULL(c.weekdayevening,0) AS 'weekdayevening',IFNULL(e.weekendnoon,0) AS 'weekendnoon',IFNULL(d.weekendevening,0) AS 'weekendevening'
+ FROM 
+
+(SELECT member_Id,COUNT(1) AS allcount FROM pos_consumption
+WHERE status_code=1
+GROUP BY member_Id) a
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekdaynoon' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) BETWEEN '2' AND '6' 
+AND SUBSTRING(created_on,12,2) BETWEEN '10' AND'15'
+GROUP BY member_id
+)AS b ON a.member_id=b.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekdayevening' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) BETWEEN '2' AND '5' 
+AND SUBSTRING(created_on,12,2) BETWEEN '16' AND'21'
+GROUP BY member_id
+)AS c ON a.member_id=c.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekendevening' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(1,6,7) 
+AND SUBSTRING(created_on,12,2) BETWEEN '16' AND'21'
+GROUP BY member_id
+)AS d ON a.member_id=d.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekendnoon' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(1,7) 
+AND SUBSTRING(created_on,12,2) BETWEEN '10' AND'15'
+GROUP BY member_id
+)AS e ON a.member_id=e.member_Id) a) a
+HAVING 消费次数占比>0.65
+
+UNION ALL 
+SELECT a.*,ROUND(eatcount/allcount,2) AS rating FROM
+(
+SELECT member_Id, CASE WHEN rating_week <0.5 AND rating_time >=0.5 THEN week1
+ELSE CASE WHEN rating_week >=0.5 AND rating_time <0.5 THEN time_
+	ELSE '无特定时间段'
+	END
+END AS '常用时间点',
+CASE WHEN rating_week <0.5 AND rating_time >=0.5 THEN week_count
+ELSE CASE WHEN rating_week >=0.5 AND rating_time <0.5 THEN time_count
+	ELSE '无特定时间段'
+	END
+END AS eatcount,allcount
+
+FROM (
+
+SELECT member_id,
+
+
+
+CASE WHEN weekday1>weekend THEN  '工作日' ELSE '周末' END AS 'week1',
+CASE WHEN noon>night  THEN '中午' ELSE '晚上' END AS 'time_',
+
+CASE WHEN weekday1>weekend THEN  weekday1 ELSE weekend END AS 'week_count',
+CASE WHEN noon>night  THEN noon ELSE night END AS 'time_count',
+
+CASE WHEN weekday1>weekend THEN  weekend/weekday1 ELSE weekday1/weekend END AS rating_week,
+CASE WHEN noon>night  THEN night/noon ELSE noon/night END AS rating_time,a.allcount FROM (
+
+
+
+
+
+
+SELECT a.member_id,COUNT(1) AS allcount,IFNULL(b.weekday1,0)AS weekday1,IFNULL(c.weekend,0) AS weekend, IFNULL(d.noon,0) AS noon, IFNULL(e.night,0) AS night FROM pos_consumption a
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS weekday1 FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(2,3,4,5,6)
+GROUP BY member_id
+)AS b ON a.member_id=b.member_Id
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS weekend FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(1,7)
+GROUP BY member_id
+)AS c ON a.member_id=c.member_Id
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS noon FROM pos_consumption 
+WHERE status_code=1 AND SUBSTRING(created_on,12,2) BETWEEN '10' AND'15'
+GROUP BY member_id
+)AS d ON a.member_id=d.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS night FROM pos_consumption 
+WHERE status_code=1 AND SUBSTRING(created_on,12,2) BETWEEN '16' AND'20'
+GROUP BY member_id
+)AS e ON a.member_id=e.member_Id
+WHERE a.status_code=1
+AND a.member_id NOT IN ((SELECT member_id FROM (
+
+SELECT a.*,ROUND(eatcount/allcount,2) AS '消费次数占比' FROM 
+(
+SELECT member_id,
+CASE WHEN weekdaynoon> weekdayevening AND weekdaynoon >weekendnoon AND weekdaynoon > weekendevening THEN '工作日中午'
+ELSE CASE WHEN weekendnoon >=weekdaynoon AND weekendnoon>weekendevening AND weekendnoon>weekdayevening THEN'周末中午'
+	ELSE CASE WHEN weekdayevening>=weekdaynoon AND weekdayevening>=weekendnoon AND weekdayevening>weekendevening THEN '工作日晚上'
+		ELSE CASE WHEN weekendevening>=weekdaynoon  AND weekendevening>=weekendnoon AND weekendevening>=weekdayevening THEN '周末晚上' 
+		END
+	END
+END
+END  AS 'eattime',
+CASE WHEN weekdaynoon> weekdayevening AND weekdaynoon >weekendnoon AND weekdaynoon > weekendevening THEN weekdaynoon
+ELSE CASE WHEN weekendnoon >=weekdaynoon AND weekendnoon>weekendevening AND weekendnoon>weekdayevening THEN weekendnoon
+	ELSE CASE WHEN weekdayevening>=weekdaynoon AND weekdayevening>=weekendnoon AND weekdayevening>weekendevening THEN weekdayevening
+		ELSE CASE WHEN weekendevening>=weekdaynoon  AND weekendevening>=weekendnoon AND weekendevening>=weekdayevening THEN weekendevening 
+		END
+	END
+END
+END  AS 'eatcount',
+allcount 
+FROM (
+SELECT a.member_Id,IFNULL(a.allcount,0) AS 'allcount',
+IFNULL(b.weekdaynoon,0) AS 'weekdaynoon',IFNULL(c.weekdayevening,0) AS 'weekdayevening',IFNULL(e.weekendnoon,0) AS 'weekendnoon',IFNULL(d.weekendevening,0) AS 'weekendevening'
+ FROM 
+
+(SELECT member_Id,COUNT(1) AS allcount FROM pos_consumption
+WHERE status_code=1
+GROUP BY member_Id) a
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekdaynoon' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(2,3,4,5,6)
+AND SUBSTRING(created_on,12,2) BETWEEN '10' AND'15'
+GROUP BY member_id
+)AS b ON a.member_id=b.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekdayevening' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(2,3,4,5)
+AND SUBSTRING(created_on,12,2) BETWEEN '16' AND'21'
+GROUP BY member_id
+)AS c ON a.member_id=c.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekendevening' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(1,7,6)
+AND SUBSTRING(created_on,12,2) BETWEEN '16' AND'21'
+GROUP BY member_id
+)AS d ON a.member_id=d.member_Id
+
+LEFT JOIN (
+SELECT member_Id,COUNT(1) AS 'weekendnoon' FROM pos_consumption 
+WHERE status_code=1 AND DAYOFWEEK(created_on) IN(1,7)
+AND SUBSTRING(created_on,12,2) BETWEEN '10' AND'15'
+GROUP BY member_id
+)AS e ON a.member_id=e.member_Id) a) a
+HAVING 消费次数占比>0.65) a))
+GROUP BY a.member_id)a)a)a
